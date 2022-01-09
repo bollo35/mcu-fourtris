@@ -44,6 +44,10 @@ fn main() -> ! {
     peripherals.SYSCTL.rcgcadc.modify(|r, w| unsafe { w.bits( r.bits() | 3 ) } );
     // 2. enable clock for the B and D ports
     peripherals.SYSCTL.rcgcgpio.modify(|r, w| unsafe { w.bits (r.bits() | 0x0A) } );
+
+    // wait for port B and D to be ready for use
+    while peripherals.SYSCTL.prgpio.read().bits() & 0x0A != 0x0A {}
+
     // 3. set AFSEL bits for PB5 and PD3
     peripherals.GPIO_PORTB_AHB.afsel.modify(|r, w| unsafe { w.bits( r.bits() | 0x20 ) }  );
     peripherals.GPIO_PORTD_AHB.afsel.modify(|r, w| unsafe { w.bits( r.bits() | 8 ) }  );

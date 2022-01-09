@@ -48,6 +48,9 @@ impl Lcd<'_> {
         // --------------------------------------
         // 1. enable clock for port A and F GPIO pins
         p.SYSCTL.rcgcgpio.modify(|r, w| unsafe { w.bits (r.bits() | 0x21) } );
+
+        // wait for port A and F to be ready for use
+        while p.SYSCTL.prgpio.read().bits() & 0x21 != 0x21 {}
         // --------------------
         // --- PORT A setup ---
         // --------------------
