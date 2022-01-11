@@ -105,25 +105,10 @@ impl Lcd<'_> {
     }
 
     pub fn init(&self) {
-        // SET INITIAL PIN STATES
-        /*
-        // set Backlight (PF3)  and !RESET (PF0) high - MODIFIED should OR with 9 to do both
-        // Backlight can be jumpered on the board, if you move the jumper, then change this to 9
-        peripherals.GPIO_PORTF_AHB.data.modify(|r, w| unsafe { w.bits( r.bits() | 1) });
-        */
-        // set CS (PA4) low
-        self.cs_low();
-        // set !RESET (PF0) low
-        self.reset_low();
-        // set D/CX (PF4) low
-        self.dcx_low();
-
         // -------------------------------
         // CONFIGURE THE LCD FOR OPERATION
         // -------------------------------
-        mini_delay();
         self.reset_high();
-        // set CS (PA4) high
         self.cs_high();
 
         mini_delay();
@@ -152,7 +137,7 @@ impl Lcd<'_> {
     }
 
     // -------------------------------------
-    // HIGHER ABSTRACTIONS USED internally
+    //          HIGHER ABSTRACTIONS
     // -------------------------------------
     pub fn set_drawing_area(&self, x: u8, y: u8, width: u8, height: u8) {
         // ** set column range
@@ -416,7 +401,7 @@ impl GameRenderer for LcdBackend<'_> {
 
 
     fn draw_level(&mut self, level: usize) {
-        // erase the old level displayed
+        // erase the old level number displayed
         self.lcd.set_drawing_area((PLAYFIELD_HORIZONTAL_PADDING - LEVEL_TEXT_WIDTH) / 2,
                                   12 + PLAYFIELD_VERTICAL_PADDING as u8,
                                   LEVEL_TEXT_WIDTH,
@@ -449,7 +434,7 @@ impl GameRenderer for LcdBackend<'_> {
 }
 
 // -------------------------------
-//        CONSTANTS
+//            CONSTANTS
 // -------------------------------
 const TEXT_HEIGHT : u8 = 8;
 const NUMBER_CHAR_WIDTH : u8 = 4;
