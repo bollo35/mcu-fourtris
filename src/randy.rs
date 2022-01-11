@@ -70,6 +70,7 @@ impl Rng for Randy {
             ret
         } else {
             // TODO: how to handle this?
+            //       Eh, 3 is pretty random, who would have guessed I would do this? muahahah
             3
         }
     }

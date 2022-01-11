@@ -15,6 +15,9 @@ use lcd_backend::{Lcd, LcdBackend};
 mod randy;
 use randy::Randy;
 
+mod timer;
+use timer::TimerA;
+
 
 
 // Pins used for the LCD
@@ -123,15 +126,17 @@ fn main() -> ! {
 
     lcd_backend.draw_initial_screen();
     lcd_backend.turn_on_display();
+    
+    // CONFIGURE THE TIMER!
+    let timer0_a = TimerA::new(&peripherals);
+    // want to run at 60fps
+    // clock is 16 MHz
+    // timer value = 16_000_000 / 60 ~ 266_667
+    // eh, turns out 70 fps is more fun! :)
+    timer0_a.configure(16000000 / 70);
+    timer0_a.start();
 
     loop {
-        // check if we don't have enough random data
-        if rng.nums_available() < 6 {
-            peripherals.GPIO_PORTF_AHB.data.modify(|r, w| unsafe { w.bits( r.bits() | 8) });
-        } else {
-            peripherals.GPIO_PORTF_AHB.data.modify(|r, w| unsafe { w.bits( r.bits() & (!8) ) });
-        }
-
         // Check to see if the user wants to restart the game
         let porte = peripherals.GPIO_PORTE_AHB.data.read().bits();
         // joystick select resets the game
@@ -195,5 +200,9 @@ fn main() -> ! {
             GameState::GameOver => {
             },
         }
+
+        // chill out until a timer interrupt occurs
+        while !timer0_a.timeout_occured() {}
+        timer0_a.clear_interrupt();
     }
 }
