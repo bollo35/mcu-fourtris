@@ -35,7 +35,7 @@ fn main() -> ! {
     // 0b100011
     // 0b111011
     //   FEDCBA
-    peripherals.SYSCTL.gpiohbctl.modify(|r, w| unsafe { w.bits (r.bits() | 0x3B) } );
+    peripherals.SYSCTL.gpiohbctl.modify(|r, w| unsafe { w.bits (r.bits() | 0b11_1011) } );
 
     let lcd = Lcd::new(&peripherals); 
     let mut lcd_backend = LcdBackend::new(lcd);
@@ -45,21 +45,22 @@ fn main() -> ! {
     // 1. enable both ADC modules. One will be used to sample the X axis and one will be used to
     //    sample the y-axis
     peripherals.SYSCTL.rcgcadc.modify(|r, w| unsafe { w.bits( r.bits() | 3 ) } );
-    // 2. enable clock for the B and D ports
-    peripherals.SYSCTL.rcgcgpio.modify(|r, w| unsafe { w.bits (r.bits() | 0x0A) } );
+    // 2. enable clock for the B and D ports                                DCBA
+    peripherals.SYSCTL.rcgcgpio.modify(|r, w| unsafe { w.bits (r.bits() | 0b1010) } );
 
     // wait for port B and D to be ready for use
-    while peripherals.SYSCTL.prgpio.read().bits() & 0x0A != 0x0A {}
+    while peripherals.SYSCTL.prgpio.read().bits() & 0b1010 != 0b1010 {}
 
-    // 3. set AFSEL bits for PB5 and PD3
-    peripherals.GPIO_PORTB_AHB.afsel.modify(|r, w| unsafe { w.bits( r.bits() | 0x20 ) }  );
-    peripherals.GPIO_PORTD_AHB.afsel.modify(|r, w| unsafe { w.bits( r.bits() | 8 ) }  );
+    // 3. set AFSEL bits for PB5 and PD3                                         54 3210
+    peripherals.GPIO_PORTB_AHB.afsel.modify(|r, w| unsafe { w.bits( r.bits() | 0b10_0000 ) }  );
+    //                                                                           3210
+    peripherals.GPIO_PORTD_AHB.afsel.modify(|r, w| unsafe { w.bits( r.bits() | 0b1000 ) }  );
     // 4. configure PB5 and PD3 as analog by clearing GPIODEN bits
-    peripherals.GPIO_PORTB_AHB.den.modify(|r, w| unsafe { w.bits( r.bits() & (!0x20) ) } );
-    peripherals.GPIO_PORTD_AHB.den.modify(|r, w| unsafe { w.bits( r.bits() & (!8) ) } );
+    peripherals.GPIO_PORTB_AHB.den.modify(|r, w| unsafe { w.bits( r.bits() & (!0b10_0000) ) } );
+    peripherals.GPIO_PORTD_AHB.den.modify(|r, w| unsafe { w.bits( r.bits() & (!0b1000) ) } );
     // 5. disable analog isolation circuit for the ADC input pins (PB5 and PD3)
-    peripherals.GPIO_PORTB_AHB.amsel.modify(|r, w| unsafe { w.bits( r.bits() | 0x20 ) }  );
-    peripherals.GPIO_PORTD_AHB.amsel.modify(|r, w| unsafe { w.bits( r.bits() | 8 ) }  );
+    peripherals.GPIO_PORTB_AHB.amsel.modify(|r, w| unsafe { w.bits( r.bits() | 0b10_0000 ) }  );
+    peripherals.GPIO_PORTD_AHB.amsel.modify(|r, w| unsafe { w.bits( r.bits() | 0b1000 ) }  );
     // 7. disable sample sequencer 0 in both ADCs
     // we will sample a different axis on both
     peripherals.ADC0.actss.modify(|r, w| unsafe { w.bits( r.bits() & (!1) ) } );
@@ -88,17 +89,17 @@ fn main() -> ! {
     // These buttons pull the pins to ground
     // there are pull-up resistors on the pcb
     // --------------------------------------------------
-    // 1. enable clock for ports D and E (bits 3 and 4)
-    peripherals.SYSCTL.rcgcgpio.modify(|r, w| unsafe { w.bits( r.bits() | 0x18 )});
+    // 1. enable clock for ports D and E (bits 3 and 4)                     E DBCA
+    peripherals.SYSCTL.rcgcgpio.modify(|r, w| unsafe { w.bits( r.bits() | 0b1_1000 )});
     // unlock the GPIOCR register, and modify it so we can configure PD7
     peripherals.GPIO_PORTD_AHB.lock.write(|w| unsafe { w.bits( 0x4C4F434B ) });
     peripherals.GPIO_PORTD_AHB.cr.modify(|r, w| unsafe { w.bits( r.bits() | 0x80 ) });
-    // 2. set pins D6 and D7 as input
-    peripherals.GPIO_PORTD_AHB.dir.modify(|r, w| unsafe { w.bits( r.bits() & (!0xC0) )});
-    peripherals.GPIO_PORTD_AHB.den.modify(|r, w| unsafe { w.bits( r.bits() | 0xC0 )});
-    // 3. set pin E4 as input
-    peripherals.GPIO_PORTE_AHB.dir.modify(|r, w| unsafe { w.bits( r.bits() & (!0x10) )});
-    peripherals.GPIO_PORTE_AHB.den.modify(|r, w| unsafe { w.bits( r.bits() | 0x10 )});
+    // 2. set pins D6 and D7 as input                                            7654 3210
+    peripherals.GPIO_PORTD_AHB.dir.modify(|r, w| unsafe { w.bits( r.bits() & (!0b1100_0000) )});
+    peripherals.GPIO_PORTD_AHB.den.modify(|r, w| unsafe { w.bits( r.bits() |   0b1100_0000)});
+    // 3. set pin E4 as input                                                    4 3210
+    peripherals.GPIO_PORTE_AHB.dir.modify(|r, w| unsafe { w.bits( r.bits() & (!0b1_0000) )});
+    peripherals.GPIO_PORTE_AHB.den.modify(|r, w| unsafe { w.bits( r.bits() | 0b1_0000 )});
 
     // ---------------------------------------
     //   RANDOM NUMBER HOLDER INITIALIZATION
@@ -185,8 +186,9 @@ fn main() -> ! {
         // button 1 (PD6) is for counter clockwise rotation
         // button 2 (PD7) is for counter clockwise rotation
         let portd = peripherals.GPIO_PORTD_AHB.data.read().bits();
-        let ccw_rotate = portd & 0x80 == 0; 
-        let cw_rotate = portd & 0x40 == 0;
+        
+        let ccw_rotate = portd & 0b1000_0000 == 0; 
+        let cw_rotate  = portd & 0b0100_0000 == 0;
 
         input.ccw_rotate = ccw_rotate;
         input.cw_rotate = cw_rotate;
