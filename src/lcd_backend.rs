@@ -35,6 +35,13 @@ fn mini_delay() {
     }
 }
 
+// Pins used for the LCD
+// PA4 - CS (Chip select)
+// PB4 - SPI CLK
+// PB7 - SSI2Tx (MOSI)
+// PF0 - !RESET
+// PF3 - Backlight UNUSED (only would need to be enabled if you had the jumper set appropriately)
+// PF4 - D/CX (data/command)
 pub struct Lcd<'a> {
     p: &'a tm4c123x::Peripherals,
 }
@@ -77,6 +84,8 @@ impl Lcd<'_> {
         p.SYSCTL.rcgcssi.modify(|r, w| unsafe { w.bits( r.bits() | 4 ) });
         // 2. enable clock for port B GPIO pins
         p.SYSCTL.rcgcgpio.modify(|r, w| unsafe { w.bits (r.bits() | 2) } );
+        // wait for port B to be ready for use
+        while p.SYSCTL.prgpio.read().bits() & 2 != 2 {}
         // 3. enable alternative functions for pins 4 and 7
         p.GPIO_PORTB_AHB.afsel.modify(|r, w| unsafe { w.bits( (1<<7) | (1<<4) | r.bits() ) });
         // 4. set appropriate PMC bits in GPIOCTL
@@ -98,6 +107,9 @@ impl Lcd<'_> {
 
         // 11. enable SSI2 module
         p.SSI2.cr1.modify(|r, w| unsafe { w.bits (r.bits() | 2) });
+
+        // wait for SSI2 to be ready
+        while p.SYSCTL.prssi.read().bits() & 0b100 != 0b100 {}
 
         Lcd {
             p,

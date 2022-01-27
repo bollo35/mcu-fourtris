@@ -1,10 +1,10 @@
-pub struct TimerA<'a> {
+pub struct Timer0<'a> {
     p: &'a tm4c123x::Peripherals,
 }
 
 
-impl TimerA<'_> {
-    pub fn new(p: &tm4c123x::Peripherals) -> TimerA {
+impl Timer0<'_> {
+    pub fn new(p: &tm4c123x::Peripherals, interval_value: u32) -> Timer0 {
         // 0. Set the Timer0 bit in the RCGCTIMER register
         p.SYSCTL.rcgctimer.modify(|r, w| unsafe { w.bits( r.bits() | 1 ) });
 
@@ -24,14 +24,12 @@ impl TimerA<'_> {
         // 4. TASNAPS and TACDIR - take a snapshot and use count up mode
         p.TIMER0.tamr.modify(|r, w| unsafe { w.bits( r.bits() | 0x90 ) });
 
-        TimerA {
+        // 5. Load start value into TnILR register
+        p.TIMER0.tailr.write(|w| unsafe { w.bits(interval_value) });
+
+        Timer0 {
             p
         }
-    }
-
-    pub fn configure(&self, interval_value: u32) {
-        // 5. Load start value into TnILR register
-        self.p.TIMER0.tailr.write(|w| unsafe { w.bits(interval_value) });
     }
 
     pub fn start(&self) {
